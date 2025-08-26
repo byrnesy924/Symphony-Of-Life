@@ -73,7 +73,7 @@ def evaluate_cell(
     :param Cell down: _description_
     :return Cell: updated cell with a new colour
     """
-    if bias <= 0 or bias > 1:
+    if bias <= 0 or bias > 10:
         raise ValueError(f"Bias value given was incorrect: {bias}")
 
     cells: list[Cell] = [cell, left, right, up, down]
@@ -190,8 +190,8 @@ def rainbow_board(n, m) -> np.ndarray[Cell]:
         for j in range(m):
             if abs(i - j) < 10:
                 arr[i, j] = Cell(x=i, y=j, colour=rgb_to_hex((i, j, abs(i-j))))
-            elif abs(i - j) - n > -10:
-                arr[i, j] = Cell(x=i, y=j, colour=rgb_to_hex((abs(i-j), i, j)))
+            elif abs(i - j) > min(m, n) - 10:
+                arr[i, j] = Cell(x=i, y=j, colour=rgb_to_hex((j, i, abs(i-j))))
             else:
                 arr[i, j] = Cell(x=i, y=j, colour="#000000")
 
@@ -238,6 +238,7 @@ if __name__ == "__main__":
 
     # Funk diagonal starting board
     start = perf_counter()
+    bias = 1.04
     rows, cols = (256, 256)
     # Create starting board
     starting_board = rainbow_board(rows, cols)
@@ -245,7 +246,7 @@ if __name__ == "__main__":
 
     # Create some random inputs
     for i in range(number_of_steps):
-        if random.random() > 0.6:
+        if random.random() > 0.8:
             input_board = random_board(rows, cols, threshold=0.99)
             input_boards[i] = input_board
 
