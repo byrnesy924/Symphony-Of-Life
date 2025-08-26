@@ -4,7 +4,7 @@ import imageio.v2 as imageio
 
 from pathlib import Path
 from dataclasses import dataclass
-from utils_gol import mix_multiple_colors, hex_grid_to_rgb_array, rand_hex
+from utils_gol import mix_multiple_colors, hex_grid_to_rgb_array, rand_hex, rgb_to_hex
 
 from time import perf_counter
 
@@ -39,7 +39,8 @@ class ColourGrid:
                 # Allow the agent to input in new cells - override the previous cell
                 if inputs is not None and inputs[i, j] is not None:
                     # TODO - consider blending with current cell
-                    self.pattern[i, j] = inputs[i, j]
+                    if inputs[i, j].colour != "#000000":
+                        self.pattern[i, j] = inputs[i, j]
                     continue
 
                 # TODO consider including the corners!
@@ -182,32 +183,47 @@ def save_gif(frames: list[np.ndarray], path: str | Path, fps: int = 12, loop: in
     imageio.mimsave(path, checked_frames, format="GIF", duration=duration, loop=loop)
 
 
+def rainbow_board(n, m) -> np.ndarray[Cell]:
+    """Funky diagnoal pattern starting board"""
+    arr = np.empty((n, m), dtype=object)
+    for i in range(n):
+        for j in range(m):
+            if abs(i - j) < 10:
+                arr[i, j] = Cell(x=i, y=j, colour=rgb_to_hex((i, j, abs(i-j))))
+            elif abs(i - j) - n > -10:
+                arr[i, j] = Cell(x=i, y=j, colour=rgb_to_hex((abs(i-j), i, j)))
+            else:
+                arr[i, j] = Cell(x=i, y=j, colour="#000000")
+
+    return arr
+
+
 if __name__ == "__main__":
 
     sizes_to_do = [
         (64, 128),
         (128, 256),
-        (360, 640),
-        (480, 640),
-        (720, 1080),
-        (1080, 1920),
-        (1440, 2560)
+        # (360, 640),
+        # (480, 640),
+        # (720, 1080),
+        # (1080, 1920),
+        # (1440, 2560)
     ]
 
     number_of_steps = 144
-    bias = 0.4
+    bias = 0.98
 
     for index, size in enumerate(sizes_to_do):
         start = perf_counter()
         rows, cols = size
         # Create starting board
-        starting_board = random_board(rows, cols)
+        starting_board = random_board(rows, cols, threshold=0.8)
         input_boards = dict()
 
         # Create some random inputs
         for i in range(number_of_steps):
-            if random.random() > 0.9:
-                input_board = random_board(rows, cols, threshold=0.95)
+            if random.random() > 0.8:
+                input_board = random_board(rows, cols, threshold=0.9999)
                 input_boards[i] = input_board
 
         frames = render_frames_from_lifegrid(
@@ -216,6 +232,29 @@ if __name__ == "__main__":
             extra_input=input_boards
         )
 
-        save_gif(frames=frames, path=f"random-{index}-{rows}x{cols}.gif", fps=12, loop=4)
+        save_gif(frames=frames, path=f"random-{index}-{rows}x{cols}.gif", fps=6, loop=1)
         end = perf_counter()
-        print(f"Took {end - start} seconds ({(end - start)/60} mins) to do size {rows}x{cols} (Total cells {rows*cols})")
+        print(f"Took {end - start} seconds ({(end - start)/60} mins) to do size {rows}x{cols} for {number_of_steps} (Total calcs {rows*cols*number_of_steps})")
+
+    # Funk diagonal starting board
+    start = perf_counter()
+    rows, cols = (256, 256)
+    # Create starting board
+    starting_board = rainbow_board(rows, cols)
+    input_boards = dict()
+
+    # Create some random inputs
+    for i in range(number_of_steps):
+        if random.random() > 0.6:
+            input_board = random_board(rows, cols, threshold=0.99)
+            input_boards[i] = input_board
+
+    frames = render_frames_from_lifegrid(
+        life_grid=ColourGrid(pattern=starting_board, bias=bias),
+        steps=number_of_steps,
+        extra_input=input_boards
+    )
+
+    save_gif(frames=frames, path=f"Diagonal-{rows}x{cols}.gif", fps=6, loop=1)
+    end = perf_counter()
+    print(f"Took {end - start} seconds ({(end - start)/60} mins) to do size {rows}x{cols} for {number_of_steps} (Total calcs {rows*cols*number_of_steps})")

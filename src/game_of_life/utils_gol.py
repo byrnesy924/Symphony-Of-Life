@@ -76,7 +76,8 @@ def mix_multiple_colors(hex_colours: list, weights: list = None, bias: float = 1
     - weights: list of relative weights (same length as hex_colors).
                If None, equal weights are assumed.
     """
-    if bias <= 0 or bias > 1:
+    if bias <= 0 or bias > 10:
+        # Put an upper bound on bias - but bias > 1 could do some interesting things with minimal input
         raise ValueError(f"Bias value given was incorrect: {bias}")
 
     n = len(hex_colours)
@@ -88,7 +89,7 @@ def mix_multiple_colors(hex_colours: list, weights: list = None, bias: float = 1
     if len(weights) != n:
         raise ValueError(f"weights must be the same length as hex_colors. Weights: {weights}. Hex colours: {hex_colours}")
 
-    total_weight = sum(weights) * bias  # Here add in bias so that the system slowly decays over time without input (or lots of initial input)
+    total_weight = sum(weights) / bias  # Here add in bias so that the system slowly decays over time without input (or lots of initial input)
     r_total = g_total = b_total = 0
 
     for hex_code, w in zip(hex_colours, weights):
