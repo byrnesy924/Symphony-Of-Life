@@ -128,7 +128,7 @@ def render_frames_from_lifegrid(
 
 
 def random_board(x, y, threshold: float = 0.8) -> np.ndarray:
-    """Create a random board"""
+    """Create a random board of shape x, y"""
     arr = np.empty(shape=(x, y), dtype=object)
 
     for row in range(x):
@@ -188,9 +188,9 @@ def rainbow_board(n, m) -> np.ndarray[Cell]:
     arr = np.empty((n, m), dtype=object)
     for i in range(n):
         for j in range(m):
-            if abs(i - j) < 10:
+            if abs(i - j) < 40:
                 arr[i, j] = Cell(x=i, y=j, colour=rgb_to_hex((i, j, abs(i-j))))
-            elif abs(i - j) > min(m, n) - 10:
+            elif abs(i - j) > min(m, n) - 100:
                 arr[i, j] = Cell(x=i, y=j, colour=rgb_to_hex((j, i, abs(i-j))))
             else:
                 arr[i, j] = Cell(x=i, y=j, colour="#000000")
@@ -222,8 +222,8 @@ if __name__ == "__main__":
 
         # Create some random inputs
         for i in range(number_of_steps):
-            if random.random() > 0.8:
-                input_board = random_board(rows, cols, threshold=0.9999)
+            if random.random() > 0.9:
+                input_board = random_board(rows, cols, threshold=0.99999)
                 input_boards[i] = input_board
 
         frames = render_frames_from_lifegrid(
@@ -238,8 +238,8 @@ if __name__ == "__main__":
 
     # Funk diagonal starting board
     start = perf_counter()
-    bias = 1.04
-    rows, cols = (256, 256)
+    bias = 1.05
+    rows, cols = (512, 512)
     # Create starting board
     starting_board = rainbow_board(rows, cols)
     input_boards = dict()
