@@ -5,6 +5,8 @@ from pathlib import Path
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from time import perf_counter
 from pydantic import BaseModel, ConfigDict, ValidationError
+from langchain.tools import tool
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='llm_modelling.log', encoding='utf-8', level=logging.DEBUG)
@@ -217,16 +219,40 @@ class InputAgentParser(BaseModel):
     inputArray: list[list[str]]
 
 
-if __name__ == "__main__":
-    # Test pydantic
-    test_input = """This has some garbage in it.
-    {"inputArray": [["Test", "Test"]]}"""
-    test_val = evaluate_json_from_llm(test_input)
-    try:
-        InputAgentParser.model_validate_json(test_val)
-    except ValidationError as e:
-        raise e
+#####################################
+# -------- Langchain Tools -------- #
+#####################################
+@tool(
+    "game_of_life_input_agent",
+    description="Tool that takes a description input and a n*m board and creates input"
+)
+def call_game_of_life_input_agent(n: int, m: int, instruction: str, feedback: list[dict]):
+    """Langchain tool wrapper for calling input agent.
+    Note that this is a bit of a scuffed merging of code with langchain.
+    game_of_life_input_agent needs to be instantiated outside of the code block
 
+    :param int n: n rows in game of life board
+    :param int m: m columns in game of life board
+    :param str instruction: instruction that the LLM needs to interpret into an input
+    :param list[dict] feedback: previous feedback from its results to consider
+    """
+    # check if agent has been instantiated
+    # TODO if this will go full langgraph style, consider passing model type or how to instantiate models etc.
+    if game_of_life_input_agent not in globals():
+        raise Exception("Input agent has not been created - instantiate one before calling this tool")
+    
+    result: str = game_of_life_input_agent.full_workflow(n, m, instruction, feedback)
+    result_json_extracted: str = evaluate_json_from_llm(result)
+    try:
+        InputAgentParser.model_validate_json(result_json_extracted)
+
+    except ValidationError as e:
+        # TODO consider how to handle error flow
+        raise e
+    return result_json_extracted
+
+
+if __name__ == "__main__":
     # When given a basic task to make a diagonal of one colour and all other colours a specific colour, QWEN performed the best by far
     models_to_test = [
         # "roneneldan/TinyStories-1M",  # 7s story (100 tokens), 2s story (100 tokens) only generates stories...
@@ -237,9 +263,7 @@ if __name__ == "__main__":
         "microsoft/Phi-3-mini-128k-instruct",  # Note 3.8B parameters not 128k. 1249s for story
     ]
 
-    prompt = "Once upon a time there was"
-    # prompt = "Generate a list of length 100 with HEX colour codes at each location"
-
+    # Test models one by one
     for model in models_to_test:
         print(f"Doing model: {model}")
         start = perf_counter()
